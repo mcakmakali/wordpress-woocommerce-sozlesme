@@ -8,6 +8,7 @@
  * Author URI: https://mehmetalicakmak.me
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: sozlesme-yonetimi-for-woocommerce
  * Requires Plugins: woocommerce
  */
 
@@ -155,7 +156,7 @@ final class Sozlesme_Yonetimi {
 	}
 
 	public function save_meta( $post_id ) {
-		if ( ! isset( $_POST['sozlesme_wce_meta_nonce'] ) || ! wp_verify_nonce( $_POST['sozlesme_wce_meta_nonce'], 'sozlesme_wce_meta_save' ) ) {
+		if ( ! isset( $_POST['sozlesme_wce_meta_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['sozlesme_wce_meta_nonce'] ) ), 'sozlesme_wce_meta_save' ) ) {
 			return;
 		}
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
@@ -216,7 +217,7 @@ final class Sozlesme_Yonetimi {
 	}
 
 	public function render_settings_page() {
-		if ( isset( $_POST['sozlesme_wce_ayarlar_nonce'] ) && wp_verify_nonce( $_POST['sozlesme_wce_ayarlar_nonce'], 'sozlesme_wce_ayarlar_save' ) ) {
+		if ( isset( $_POST['sozlesme_wce_ayarlar_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['sozlesme_wce_ayarlar_nonce'] ) ), 'sozlesme_wce_ayarlar_save' ) ) {
 			update_option( 'sozlesme_wce_fatura_tipi_aktif', isset( $_POST['sozlesme_wce_fatura_tipi_aktif'] ) ? 'yes' : 'no' );
 			echo '<div class="notice notice-success"><p>Ayarlar kaydedildi.</p></div>';
 		}
@@ -259,10 +260,10 @@ final class Sozlesme_Yonetimi {
 	public function add_billing_customer_type_fields( $fields ) {
 		$fields['billing']['billing_customer_type'] = array(
 			'type'     => 'radio',
-			'label'    => __( 'Fatura Tipi', 'woocommerce' ),
+			'label'    => __( 'Fatura Tipi', 'sozlesme-yonetimi-for-woocommerce' ),
 			'options'  => array(
-				'bireysel' => __( 'Bireysel', 'woocommerce' ),
-				'kurumsal' => __( 'Kurumsal', 'woocommerce' ),
+				'bireysel' => __( 'Bireysel', 'sozlesme-yonetimi-for-woocommerce' ),
+				'kurumsal' => __( 'Kurumsal', 'sozlesme-yonetimi-for-woocommerce' ),
 			),
 			'default'  => 'bireysel',
 			'required' => true,
@@ -272,8 +273,8 @@ final class Sozlesme_Yonetimi {
 		);
 
 		$fields['billing']['billing_company'] = array(
-			'label'       => __( 'Şirket Unvanı', 'woocommerce' ),
-			'placeholder' => _x( 'Şirket Unvanı', 'placeholder', 'woocommerce' ),
+			'label'       => __( 'Şirket Unvanı', 'sozlesme-yonetimi-for-woocommerce' ),
+			'placeholder' => _x( 'Şirket Unvanı', 'placeholder', 'sozlesme-yonetimi-for-woocommerce' ),
 			'required'    => true,
 			'class'       => array( 'form-row-wide', 'billing-corporate-field' ),
 			'clear'       => true,
@@ -281,8 +282,8 @@ final class Sozlesme_Yonetimi {
 		);
 
 		$fields['billing']['billing_tax_office'] = array(
-			'label'       => __( 'Vergi Dairesi', 'woocommerce' ),
-			'placeholder' => _x( 'Vergi Dairesi', 'placeholder', 'woocommerce' ),
+			'label'       => __( 'Vergi Dairesi', 'sozlesme-yonetimi-for-woocommerce' ),
+			'placeholder' => _x( 'Vergi Dairesi', 'placeholder', 'sozlesme-yonetimi-for-woocommerce' ),
 			'required'    => true,
 			'class'       => array( 'form-row-first', 'billing-corporate-field' ),
 			'clear'       => false,
@@ -290,8 +291,8 @@ final class Sozlesme_Yonetimi {
 		);
 
 		$fields['billing']['billing_tax_number'] = array(
-			'label'       => __( 'Vergi Numarası', 'woocommerce' ),
-			'placeholder' => _x( 'Vergi Numarası', 'placeholder', 'woocommerce' ),
+			'label'       => __( 'Vergi Numarası', 'sozlesme-yonetimi-for-woocommerce' ),
+			'placeholder' => _x( 'Vergi Numarası', 'placeholder', 'sozlesme-yonetimi-for-woocommerce' ),
 			'required'    => true,
 			'class'       => array( 'form-row-last', 'billing-corporate-field' ),
 			'clear'       => true,
@@ -300,8 +301,8 @@ final class Sozlesme_Yonetimi {
 		);
 
 		$fields['billing']['billing_tc_no'] = array(
-			'label'       => __( 'T.C. Kimlik No', 'woocommerce' ),
-			'placeholder' => _x( 'T.C. Kimlik No', 'placeholder', 'woocommerce' ),
+			'label'       => __( 'T.C. Kimlik No', 'sozlesme-yonetimi-for-woocommerce' ),
+			'placeholder' => _x( 'T.C. Kimlik No', 'placeholder', 'sozlesme-yonetimi-for-woocommerce' ),
 			'required'    => true,
 			'class'       => array( 'form-row-wide', 'billing-individual-field' ),
 			'clear'       => true,
@@ -337,21 +338,21 @@ final class Sozlesme_Yonetimi {
 		$customer_type = isset( $_POST['billing_customer_type'] ) ? sanitize_text_field( wp_unslash( $_POST['billing_customer_type'] ) ) : '';
 
 		if ( $customer_type && ! in_array( $customer_type, array( 'bireysel', 'kurumsal' ), true ) ) {
-			$errors->add( 'validation', __( 'Lütfen fatura tipini (Bireysel/Kurumsal) seçiniz.', 'woocommerce' ) );
+			$errors->add( 'validation', __( 'Lütfen fatura tipini (Bireysel/Kurumsal) seçiniz.', 'sozlesme-yonetimi-for-woocommerce' ) );
 			return;
 		}
 
 		if ( 'bireysel' === $customer_type ) {
-			$tc_no = isset( $_POST['billing_tc_no'] ) ? trim( wp_unslash( $_POST['billing_tc_no'] ) ) : '';
+			$tc_no = isset( $_POST['billing_tc_no'] ) ? sanitize_text_field( wp_unslash( $_POST['billing_tc_no'] ) ) : '';
 
 			if ( $tc_no && ! preg_match( '/^[1-9][0-9]{10}$/', $tc_no ) ) {
-				$errors->add( 'validation', __( 'T.C. Kimlik Numarası 11 haneli ve rakamlardan oluşmalıdır.', 'woocommerce' ) );
+				$errors->add( 'validation', __( 'T.C. Kimlik Numarası 11 haneli ve rakamlardan oluşmalıdır.', 'sozlesme-yonetimi-for-woocommerce' ) );
 			}
 		} elseif ( 'kurumsal' === $customer_type ) {
-			$tax_number = isset( $_POST['billing_tax_number'] ) ? trim( wp_unslash( $_POST['billing_tax_number'] ) ) : '';
+			$tax_number = isset( $_POST['billing_tax_number'] ) ? sanitize_text_field( wp_unslash( $_POST['billing_tax_number'] ) ) : '';
 
 			if ( $tax_number && ! preg_match( '/^[0-9]{10}$/', $tax_number ) ) {
-				$errors->add( 'validation', __( 'Vergi Numarası 10 haneli ve rakamlardan oluşmalıdır.', 'woocommerce' ) );
+				$errors->add( 'validation', __( 'Vergi Numarası 10 haneli ve rakamlardan oluşmalıdır.', 'sozlesme-yonetimi-for-woocommerce' ) );
 			}
 		}
 	}
@@ -395,8 +396,8 @@ final class Sozlesme_Yonetimi {
 	private function get_billing_customer_type_rows( $order ) {
 		$customer_type = $order->get_meta( '_billing_customer_type', true );
 		$labels        = array(
-			'bireysel' => __( 'Bireysel', 'woocommerce' ),
-			'kurumsal' => __( 'Kurumsal', 'woocommerce' ),
+			'bireysel' => __( 'Bireysel', 'sozlesme-yonetimi-for-woocommerce' ),
+			'kurumsal' => __( 'Kurumsal', 'sozlesme-yonetimi-for-woocommerce' ),
 		);
 
 		$rows = array();
@@ -405,14 +406,14 @@ final class Sozlesme_Yonetimi {
 			return $rows;
 		}
 
-		$rows[ __( 'Fatura Tipi', 'woocommerce' ) ] = isset( $labels[ $customer_type ] ) ? $labels[ $customer_type ] : $customer_type;
+		$rows[ __( 'Fatura Tipi', 'sozlesme-yonetimi-for-woocommerce' ) ] = isset( $labels[ $customer_type ] ) ? $labels[ $customer_type ] : $customer_type;
 
 		if ( 'kurumsal' === $customer_type ) {
-			$rows[ __( 'Şirket Unvanı', 'woocommerce' ) ] = $order->get_meta( '_billing_company', true );
-			$rows[ __( 'Vergi Dairesi', 'woocommerce' ) ] = $order->get_meta( '_billing_tax_office', true );
-			$rows[ __( 'Vergi Numarası', 'woocommerce' ) ] = $order->get_meta( '_billing_tax_number', true );
+			$rows[ __( 'Şirket Unvanı', 'sozlesme-yonetimi-for-woocommerce' ) ] = $order->get_meta( '_billing_company', true );
+			$rows[ __( 'Vergi Dairesi', 'sozlesme-yonetimi-for-woocommerce' ) ] = $order->get_meta( '_billing_tax_office', true );
+			$rows[ __( 'Vergi Numarası', 'sozlesme-yonetimi-for-woocommerce' ) ] = $order->get_meta( '_billing_tax_number', true );
 		} else {
-			$rows[ __( 'T.C. Kimlik No', 'woocommerce' ) ] = $order->get_meta( '_billing_tc_no', true );
+			$rows[ __( 'T.C. Kimlik No', 'sozlesme-yonetimi-for-woocommerce' ) ] = $order->get_meta( '_billing_tc_no', true );
 		}
 
 		return $rows;
@@ -432,7 +433,7 @@ final class Sozlesme_Yonetimi {
 		}
 
 		if ( $plain_text ) {
-			echo esc_html__( 'Fatura Bilgileri', 'woocommerce' ) . "\n";
+			echo esc_html__( 'Fatura Bilgileri', 'sozlesme-yonetimi-for-woocommerce' ) . "\n";
 			foreach ( $rows as $label => $value ) {
 				echo esc_html( $label ) . ': ' . esc_html( $value ) . "\n";
 			}
@@ -440,7 +441,7 @@ final class Sozlesme_Yonetimi {
 			return;
 		}
 
-		echo '<h2>' . esc_html__( 'Fatura Bilgileri', 'woocommerce' ) . '</h2>';
+		echo '<h2>' . esc_html__( 'Fatura Bilgileri', 'sozlesme-yonetimi-for-woocommerce' ) . '</h2>';
 		echo '<ul style="margin-bottom:20px;">';
 		foreach ( $rows as $label => $value ) {
 			echo '<li>' . esc_html( $label ) . ': ' . esc_html( $value ) . '</li>';

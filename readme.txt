@@ -3,62 +3,62 @@ Contributors: mcakmakali
 Donate link: https://mehmetalicakmak.me
 Tags: woocommerce, checkout, contract, agreement, pdf
 Requires at least: 5.8
-Tested up to: 6.9
+Tested up to: 7.1
 Requires PHP: 8.1
 Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Requires Plugins: woocommerce
 
-WooCommerce ödeme sayfasında müşteriye onaylatılacak sözleşmeler (mesafeli satış sözleşmesi, ön bilgilendirme formu, KVKK metni vb.) ekler.
+Adds contracts (distance selling agreement, pre-information form, privacy notice, etc.) that customers must accept on the WooCommerce checkout page.
 
 == Description ==
 
-**Sözleşme Yönetimi**, WooCommerce ödeme (checkout) sayfasında müşteriye onay kutusuyla onaylatılacak sözleşmeler eklemenizi sağlayan bir WordPress eklentisidir.
+**Sözleşme Yönetimi** (Turkish for "Agreement Management") lets you add one or more agreements to the WooCommerce checkout page that customers accept with a checkbox before placing an order.
 
-= Özellikler =
+= Features =
 
-* Yönetim panelinden sınırsız sayıda sözleşme oluşturma; her biri "zorunlu" veya "isteğe bağlı" olarak işaretlenebilir.
-* Sözleşmeler, ödeme yöntemi seçim kutusunun üstünde onay kutuları olarak listelenir; başlığa tıklanınca tam metin bir popup'ta okunabilir.
-* Zorunlu sözleşmeler onaylanmadan sipariş tamamlanamaz (hem tarayıcı hem sunucu tarafında doğrulanır).
-* Sözleşme metinlerinde kullanılabilen WooCommerce değişkenleri: sipariş numarası, sipariş tarihi, müşteri adı/e-posta/telefon, fatura/teslimat adresi, ödeme yöntemi, sepetteki ürünlerin ürün/miktar/KDV/toplam tablosu, sepet toplamı, site adı, tarih.
-* Onaylanan sözleşmelerin, gerçek sipariş bilgileriyle doldurulmuş hâli sipariş kaydına not düşülür (yasal kanıt amaçlı).
-* Sipariş başarıyla tamamlandığında, onaylanan sözleşmelerin PDF hâli müşteriye giden sipariş e-postasına otomatik eklenir.
-* İsteğe bağlı "Fatura Tipi" (Bireysel/Kurumsal) checkout alanları: şirket ünvanı, vergi dairesi, vergi numarası veya T.C. kimlik no toplanabilir ve sözleşme değişkeni olarak kullanılabilir.
-* Sözleşme kayıtları tekil sayfa olarak görüntülenemez, arama sonuçlarına ve site haritasına (sitemap) girmez.
+* Create an unlimited number of agreements from the admin screen; each one can be marked "required" or "optional".
+* Agreements are listed as checkboxes right above the payment method box on checkout; clicking the title opens a popup with the full text.
+* Required agreements must be accepted before the order can be placed (validated both in the browser and on the server).
+* Merge tags available inside the agreement text: order number, order date, customer name/email/phone, billing/shipping address, payment method, a table of cart items with quantity/tax/totals, cart total, site name, current date.
+* The accepted agreements are stored on the order (with the merge tags already resolved to the real order data) as a permanent record.
+* When an order is successfully paid, a PDF of the accepted agreements is automatically attached to the order confirmation email sent to the customer.
+* Optional "Customer Type" (Individual/Business) checkout fields: company name, tax office, tax number, or national ID can be collected and used as merge tags.
+* Agreements are not publicly viewable as single pages and are excluded from search results and the XML sitemap.
 
-= Gereksinimler =
+= Requirements =
 
-* WooCommerce (aktif olmalı)
-* PHP 8.1 veya üzeri
+* WooCommerce (must be active)
+* PHP 8.1 or later
 
 == Installation ==
 
-1. Eklenti dosyalarını `/wp-content/plugins/woocommerce-sozlesmeler` klasörüne yükleyin (veya WordPress admin panelinden "Eklenti Ekle" ile zip dosyasını yükleyin).
-2. Eklentiyi WordPress admin panelindeki "Eklentiler" menüsünden etkinleştirin.
-3. WooCommerce menüsü altında **Sözleşmeler** ile yeni sözleşmeler ekleyin, **Sözleşme Ayarları** ile Fatura Tipi alanlarını açıp kapatın.
+1. Upload the plugin files to the `/wp-content/plugins/sozlesme-yonetimi-for-woocommerce` directory, or install the plugin through the WordPress "Add Plugin" screen directly.
+2. Activate the plugin through the "Plugins" screen in WordPress.
+3. Go to WooCommerce → Sözleşmeler to add agreements, and WooCommerce → Sözleşme Ayarları to toggle the optional Customer Type fields.
 
 == Frequently Asked Questions ==
 
-= Bu eklenti hangi ödeme akışlarıyla çalışır? =
+= What checkout flows does this plugin work with? =
 
-Hem klasik WooCommerce checkout şablonuyla hem de CheckoutWC gibi özelleştirilmiş checkout eklentileriyle çalışacak şekilde tasarlanmıştır.
+It is designed to work with both the classic WooCommerce checkout template and customized checkout plugins such as CheckoutWC.
 
-= PDF eki için ek bir kütüphane gerekir mi? =
+= Do I need to install a separate PDF library? =
 
-Hayır, gerekli PDF kütüphanesi (dompdf) eklenti içinde birlikte gelir.
+No, the required PDF library (dompdf) is bundled with the plugin.
 
-= Sözleşmeler public sayfa olarak görünür mü? =
+= Are agreements viewable as public pages? =
 
-Hayır, sözleşmeler sadece checkout'ta ve yönetim panelinde görünür; tekil sayfa olarak görüntülenemez ve site haritasına girmez.
+No, agreements are only shown on checkout and in the admin screen; they cannot be viewed as a single page and are excluded from the sitemap.
 
 == Screenshots ==
 
-1. Checkout sayfasında ödeme yöntemi kutusunun üstünde listelenen sözleşme onay kutuları.
-2. Sözleşme içeriğini gösteren okuma popup'ı.
-3. Yönetim panelinde sözleşme ekleme ekranı ve WooCommerce değişken butonları.
+1. Agreement checkboxes listed above the payment method box on the checkout page.
+2. The popup that displays the full agreement text.
+3. The admin screen for adding an agreement, with merge tag buttons.
 
 == Changelog ==
 
 = 1.0.0 =
-* İlk sürüm.
+* Initial release.
