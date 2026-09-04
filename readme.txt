@@ -5,7 +5,7 @@ Tags: woocommerce, checkout, contract, agreement, pdf
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Requires Plugins: woocommerce
@@ -59,6 +59,11 @@ No, agreements are only shown on checkout and in the admin screen; they cannot b
 3. The admin screen for adding an agreement, with merge tag buttons.
 
 == Changelog ==
+
+= 1.0.1 =
+* Renamed plugin slug/text domain to comply with the WordPress.org trademark naming rules.
+* Added translator-friendly readme.txt for the WordPress.org listing.
+* Hardened nonce and input sanitization on a few form handlers.
 
 = 1.0.0 =
 * Initial release.

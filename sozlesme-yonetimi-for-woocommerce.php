@@ -3,7 +3,7 @@
  * Plugin Name: Sözleşme Yönetimi
  * Plugin URI: https://github.com/mcakmakali/wordpress-woocommerce-sozlesme
  * Description: WooCommerce ödeme sayfasında onaylanması gereken/opsiyonel sözleşmeler eklemenizi sağlar.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Mehmet Ali Çakmak
  * Author URI: https://mehmetalicakmak.me
  * License: GPL v2 or later

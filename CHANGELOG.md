@@ -3,6 +3,15 @@
 Bu projedeki tüm önemli değişiklikler bu dosyada listelenir.
 Format [Keep a Changelog](https://keepachangelog.com/) temel alınmıştır; sürümleme [Semantic Versioning](https://semver.org/) kurallarına uyar.
 
+## [1.0.1] - 2026-09-04
+
+### Changed
+- Eklenti slug'ı ve text domain'i `sozlesme-yonetimi-for-woocommerce` olarak değiştirildi (WordPress.org marka/isimlendirme kuralı gereği).
+- WordPress.org dizini için `readme.txt` eklendi.
+
+### Fixed
+- Birkaç form işleyicide nonce ve girdi sanitizasyonu sıkılaştırıldı.
+
 ## [1.0.0] - 2026-09-04
 
 ### Added
