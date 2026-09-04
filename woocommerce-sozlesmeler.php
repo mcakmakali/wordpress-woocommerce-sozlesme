@@ -43,6 +43,19 @@ final class Sozlesme_Yonetimi {
 
 		// Sipariş başarılı olunca (ödeme tamamlandığında) müşteri e-postasına sözleşme PDF'ini ekle.
 		add_filter( 'woocommerce_email_attachments', array( $this, 'attach_agreements_pdf' ), 10, 3 );
+
+		// Eklenti ayarları sayfası (WooCommerce > Sözleşme Ayarları).
+		add_action( 'admin_menu', array( $this, 'register_settings_page' ) );
+
+		// Fatura Tipi (Bireysel/Kurumsal) alanları — ayarlar sayfasından açılıp kapatılabilir.
+		if ( self::fatura_tipi_aktif() ) {
+			add_filter( 'woocommerce_checkout_fields', array( $this, 'add_billing_customer_type_fields' ) );
+			add_filter( 'woocommerce_checkout_posted_data', array( $this, 'filter_billing_customer_type_posted_data' ) );
+			add_action( 'woocommerce_after_checkout_validation', array( $this, 'validate_billing_customer_type_fields' ), 10, 2 );
+			add_action( 'wp_footer', array( $this, 'billing_customer_type_toggle_script' ) );
+			add_action( 'woocommerce_admin_order_data_after_shipping_address', array( $this, 'display_billing_customer_type_admin_meta' ) );
+			add_action( 'woocommerce_email_order_meta', array( $this, 'display_billing_customer_type_in_emails' ), 10, 4 );
+		}
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -181,11 +194,263 @@ final class Sozlesme_Yonetimi {
 	}
 
 	/* ------------------------------------------------------------------ */
+	/* Eklenti ayarları (WooCommerce > Sözleşme Ayarları)                 */
+	/* ------------------------------------------------------------------ */
+
+	public static function fatura_tipi_aktif() {
+		return 'yes' === get_option( 'sozlesme_wce_fatura_tipi_aktif', 'yes' );
+	}
+
+	public function register_settings_page() {
+		add_submenu_page(
+			'woocommerce',
+			'Sözleşme Ayarları',
+			'Sözleşme Ayarları',
+			'manage_woocommerce',
+			'sozlesme-wce-ayarlar',
+			array( $this, 'render_settings_page' )
+		);
+	}
+
+	public function render_settings_page() {
+		if ( isset( $_POST['sozlesme_wce_ayarlar_nonce'] ) && wp_verify_nonce( $_POST['sozlesme_wce_ayarlar_nonce'], 'sozlesme_wce_ayarlar_save' ) ) {
+			update_option( 'sozlesme_wce_fatura_tipi_aktif', isset( $_POST['sozlesme_wce_fatura_tipi_aktif'] ) ? 'yes' : 'no' );
+			echo '<div class="notice notice-success"><p>Ayarlar kaydedildi.</p></div>';
+		}
+
+		$aktif = self::fatura_tipi_aktif();
+		?>
+		<div class="wrap">
+			<h1>Sözleşme Ayarları</h1>
+			<form method="post">
+				<?php wp_nonce_field( 'sozlesme_wce_ayarlar_save', 'sozlesme_wce_ayarlar_nonce' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row">Fatura Tipi Alanları</th>
+						<td>
+							<label>
+								<input type="checkbox" name="sozlesme_wce_fatura_tipi_aktif" value="1" <?php checked( $aktif ); ?> />
+								Ödeme sayfasında "Fatura Tipi" (Bireysel / Kurumsal) alanını ve buna bağlı
+								Şirket Ünvanı, Vergi Dairesi, Vergi Numarası, T.C. Kimlik No alanlarını göster.
+							</label>
+							<p class="description">
+								Aktifken bu alanlar checkout'ta görünür, sipariş admin ekranında ve sipariş
+								e-postalarında listelenir; sözleşme metinlerinde
+								<code>{fatura_tipi}</code>, <code>{sirket_unvani}</code>, <code>{vergi_numarasi}</code>,
+								<code>{vergi_dairesi}</code> değişkenlerini kullanabilirsiniz. Kurumsal seçildiğinde
+								<code>{musteri_adi}</code> değişkeni de otomatik olarak şirket ünvanını gösterir.
+							</p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( 'Kaydet' ); ?>
+			</form>
+		</div>
+		<?php
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Fatura Tipi (Bireysel/Kurumsal) — checkout alanları                */
+	/* ------------------------------------------------------------------ */
+
+	public function add_billing_customer_type_fields( $fields ) {
+		$fields['billing']['billing_customer_type'] = array(
+			'type'     => 'radio',
+			'label'    => __( 'Fatura Tipi', 'woocommerce' ),
+			'options'  => array(
+				'bireysel' => __( 'Bireysel', 'woocommerce' ),
+				'kurumsal' => __( 'Kurumsal', 'woocommerce' ),
+			),
+			'default'  => 'bireysel',
+			'required' => true,
+			'class'    => array( 'form-row-wide', 'billing-customer-type-field' ),
+			'clear'    => true,
+			'priority' => 22,
+		);
+
+		$fields['billing']['billing_company'] = array(
+			'label'       => __( 'Şirket Unvanı', 'woocommerce' ),
+			'placeholder' => _x( 'Şirket Unvanı', 'placeholder', 'woocommerce' ),
+			'required'    => true,
+			'class'       => array( 'form-row-wide', 'billing-corporate-field' ),
+			'clear'       => true,
+			'priority'    => 24,
+		);
+
+		$fields['billing']['billing_tax_office'] = array(
+			'label'       => __( 'Vergi Dairesi', 'woocommerce' ),
+			'placeholder' => _x( 'Vergi Dairesi', 'placeholder', 'woocommerce' ),
+			'required'    => true,
+			'class'       => array( 'form-row-first', 'billing-corporate-field' ),
+			'clear'       => false,
+			'priority'    => 25,
+		);
+
+		$fields['billing']['billing_tax_number'] = array(
+			'label'       => __( 'Vergi Numarası', 'woocommerce' ),
+			'placeholder' => _x( 'Vergi Numarası', 'placeholder', 'woocommerce' ),
+			'required'    => true,
+			'class'       => array( 'form-row-last', 'billing-corporate-field' ),
+			'clear'       => true,
+			'priority'    => 26,
+			'maxlength'   => 10,
+		);
+
+		$fields['billing']['billing_tc_no'] = array(
+			'label'       => __( 'T.C. Kimlik No', 'woocommerce' ),
+			'placeholder' => _x( 'T.C. Kimlik No', 'placeholder', 'woocommerce' ),
+			'required'    => true,
+			'class'       => array( 'form-row-wide', 'billing-individual-field' ),
+			'clear'       => true,
+			'priority'    => 27,
+			'maxlength'   => 11,
+		);
+
+		return $fields;
+	}
+
+	/**
+	 * Fatura Tipi'ne göre pasifleşen (görünmeyen) grubun alanlarını WooCommerce'in
+	 * genel "zorunlu alan" kontrolünden hariç tutar.
+	 */
+	public function filter_billing_customer_type_posted_data( $data ) {
+		if ( empty( $data['billing_customer_type'] ) ) {
+			return $data;
+		}
+
+		if ( 'kurumsal' === $data['billing_customer_type'] ) {
+			unset( $data['billing_tc_no'] );
+		} else {
+			unset( $data['billing_company'], $data['billing_tax_office'], $data['billing_tax_number'] );
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Fatura Tipi (Bireysel/Kurumsal) seçimine göre alan format kontrolü.
+	 */
+	public function validate_billing_customer_type_fields( $data, $errors ) {
+		$customer_type = isset( $_POST['billing_customer_type'] ) ? sanitize_text_field( wp_unslash( $_POST['billing_customer_type'] ) ) : '';
+
+		if ( $customer_type && ! in_array( $customer_type, array( 'bireysel', 'kurumsal' ), true ) ) {
+			$errors->add( 'validation', __( 'Lütfen fatura tipini (Bireysel/Kurumsal) seçiniz.', 'woocommerce' ) );
+			return;
+		}
+
+		if ( 'bireysel' === $customer_type ) {
+			$tc_no = isset( $_POST['billing_tc_no'] ) ? trim( wp_unslash( $_POST['billing_tc_no'] ) ) : '';
+
+			if ( $tc_no && ! preg_match( '/^[1-9][0-9]{10}$/', $tc_no ) ) {
+				$errors->add( 'validation', __( 'T.C. Kimlik Numarası 11 haneli ve rakamlardan oluşmalıdır.', 'woocommerce' ) );
+			}
+		} elseif ( 'kurumsal' === $customer_type ) {
+			$tax_number = isset( $_POST['billing_tax_number'] ) ? trim( wp_unslash( $_POST['billing_tax_number'] ) ) : '';
+
+			if ( $tax_number && ! preg_match( '/^[0-9]{10}$/', $tax_number ) ) {
+				$errors->add( 'validation', __( 'Vergi Numarası 10 haneli ve rakamlardan oluşmalıdır.', 'woocommerce' ) );
+			}
+		}
+	}
+
+	/**
+	 * Checkout sayfasında Fatura Tipi seçimine göre alanları göster/gizle.
+	 */
+	public function billing_customer_type_toggle_script() {
+		if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+			return;
+		}
+		?>
+		<script>
+		jQuery(function($) {
+			function mediacatToggleBillingCustomerTypeFields() {
+				var type = $('input[name="billing_customer_type"]:checked').val();
+				var $corporate = $('.billing-corporate-field');
+				var $individual = $('.billing-individual-field');
+
+				if ('kurumsal' === type) {
+					$corporate.show().addClass('validate-required').find('input').prop('disabled', false);
+					$individual.hide().removeClass('validate-required').find('input').val('').prop('disabled', true);
+				} else {
+					$individual.show().addClass('validate-required').find('input').prop('disabled', false);
+					$corporate.hide().removeClass('validate-required').find('input').val('').prop('disabled', true);
+				}
+			}
+
+			$(document.body).on('change', 'input[name="billing_customer_type"]', mediacatToggleBillingCustomerTypeFields);
+			$(document.body).on('updated_checkout', mediacatToggleBillingCustomerTypeFields);
+			mediacatToggleBillingCustomerTypeFields();
+		});
+		</script>
+		<?php
+	}
+
+	/**
+	 * Fatura Tipi'ne göre gösterilecek alanları (etiket => değer) döndürür.
+	 * Admin sipariş ekranı, sipariş e-postaları ve sözleşme değişkenleri bu fonksiyonu ortak kullanır.
+	 */
+	private function get_billing_customer_type_rows( $order ) {
+		$customer_type = $order->get_meta( '_billing_customer_type', true );
+		$labels        = array(
+			'bireysel' => __( 'Bireysel', 'woocommerce' ),
+			'kurumsal' => __( 'Kurumsal', 'woocommerce' ),
+		);
+
+		$rows = array();
+
+		if ( ! $customer_type ) {
+			return $rows;
+		}
+
+		$rows[ __( 'Fatura Tipi', 'woocommerce' ) ] = isset( $labels[ $customer_type ] ) ? $labels[ $customer_type ] : $customer_type;
+
+		if ( 'kurumsal' === $customer_type ) {
+			$rows[ __( 'Şirket Unvanı', 'woocommerce' ) ] = $order->get_meta( '_billing_company', true );
+			$rows[ __( 'Vergi Dairesi', 'woocommerce' ) ] = $order->get_meta( '_billing_tax_office', true );
+			$rows[ __( 'Vergi Numarası', 'woocommerce' ) ] = $order->get_meta( '_billing_tax_number', true );
+		} else {
+			$rows[ __( 'T.C. Kimlik No', 'woocommerce' ) ] = $order->get_meta( '_billing_tc_no', true );
+		}
+
+		return $rows;
+	}
+
+	public function display_billing_customer_type_admin_meta( $order ) {
+		foreach ( $this->get_billing_customer_type_rows( $order ) as $label => $value ) {
+			echo '<p><strong>' . esc_html( $label ) . ':</strong> ' . esc_html( $value ) . '</p>';
+		}
+	}
+
+	public function display_billing_customer_type_in_emails( $order, $sent_to_admin, $plain_text, $email ) {
+		$rows = $this->get_billing_customer_type_rows( $order );
+
+		if ( empty( $rows ) ) {
+			return;
+		}
+
+		if ( $plain_text ) {
+			echo esc_html__( 'Fatura Bilgileri', 'woocommerce' ) . "\n";
+			foreach ( $rows as $label => $value ) {
+				echo esc_html( $label ) . ': ' . esc_html( $value ) . "\n";
+			}
+			echo "\n";
+			return;
+		}
+
+		echo '<h2>' . esc_html__( 'Fatura Bilgileri', 'woocommerce' ) . '</h2>';
+		echo '<ul style="margin-bottom:20px;">';
+		foreach ( $rows as $label => $value ) {
+			echo '<li>' . esc_html( $label ) . ': ' . esc_html( $value ) . '</li>';
+		}
+		echo '</ul>';
+	}
+
+	/* ------------------------------------------------------------------ */
 	/* WooCommerce değişkenleri                                          */
 	/* ------------------------------------------------------------------ */
 
 	public static function get_placeholders() {
-		return array(
+		$placeholders = array(
 			'{siparis_no}'       => 'Sipariş Numarası',
 			'{siparis_tarihi}'   => 'Sipariş Tarihi',
 			'{musteri_adi}'      => 'Müşteri Adı Soyadı',
@@ -199,14 +464,24 @@ final class Sozlesme_Yonetimi {
 			'{site_adi}'         => 'Site Adı',
 			'{tarih}'            => 'Bugünün Tarihi',
 		);
+
+		if ( self::fatura_tipi_aktif() ) {
+			$placeholders['{fatura_tipi}']    = 'Fatura Tipi (Bireysel/Kurumsal)';
+			$placeholders['{sirket_unvani}']  = 'Şirket Unvanı';
+			$placeholders['{vergi_numarasi}'] = 'Vergi Numarası';
+			$placeholders['{vergi_dairesi}']  = 'Vergi Dairesi';
+		}
+
+		return $placeholders;
 	}
 
 	private function replace_placeholders( $content, $order = null ) {
 		if ( $order instanceof WC_Order ) {
+			$musteri_adi = trim( $order->get_formatted_billing_full_name() );
+
 			$replacements = array(
 				'{siparis_no}'      => $order->get_order_number(),
 				'{siparis_tarihi}'  => wc_format_datetime( $order->get_date_created() ),
-				'{musteri_adi}'     => trim( $order->get_formatted_billing_full_name() ),
 				'{musteri_email}'   => $order->get_billing_email(),
 				'{musteri_telefon}' => $order->get_billing_phone(),
 				'{fatura_adresi}'   => $this->format_address_fields( $order->get_billing_address_1(), $order->get_billing_address_2(), $order->get_billing_city(), $order->get_billing_state(), $order->get_billing_postcode(), $order->get_billing_country() ),
@@ -217,6 +492,24 @@ final class Sozlesme_Yonetimi {
 				'{site_adi}'        => get_bloginfo( 'name' ),
 				'{tarih}'           => date_i18n( get_option( 'date_format' ) ),
 			);
+
+			if ( self::fatura_tipi_aktif() ) {
+				$customer_type = $order->get_meta( '_billing_customer_type', true );
+				$sirket_unvani = $order->get_meta( '_billing_company', true );
+
+				if ( 'kurumsal' === $customer_type && $sirket_unvani ) {
+					$musteri_adi = $sirket_unvani;
+				}
+
+				$fatura_tipi_etiketleri = array( 'bireysel' => 'Bireysel', 'kurumsal' => 'Kurumsal' );
+
+				$replacements['{fatura_tipi}']    = isset( $fatura_tipi_etiketleri[ $customer_type ] ) ? $fatura_tipi_etiketleri[ $customer_type ] : '—';
+				$replacements['{sirket_unvani}']  = $sirket_unvani ? $sirket_unvani : '—';
+				$replacements['{vergi_numarasi}'] = $order->get_meta( '_billing_tax_number', true ) ?: '—';
+				$replacements['{vergi_dairesi}']  = $order->get_meta( '_billing_tax_office', true ) ?: '—';
+			}
+
+			$replacements['{musteri_adi}'] = $musteri_adi;
 		} else {
 			$cart     = function_exists( 'WC' ) ? WC()->cart : null;
 			$customer = function_exists( 'WC' ) ? WC()->customer : null;
@@ -234,6 +527,15 @@ final class Sozlesme_Yonetimi {
 				'{site_adi}'        => get_bloginfo( 'name' ),
 				'{tarih}'           => date_i18n( get_option( 'date_format' ) ),
 			);
+
+			// Fatura tipi henüz checkout formunda seçilmediğinden (sipariş oluşmadan önce)
+			// bu değişkenler yalnızca gerçek siparişte/PDF'te çözümlenebilir.
+			if ( self::fatura_tipi_aktif() ) {
+				$replacements['{fatura_tipi}']    = '—';
+				$replacements['{sirket_unvani}']  = '—';
+				$replacements['{vergi_numarasi}'] = '—';
+				$replacements['{vergi_dairesi}']  = '—';
+			}
 		}
 
 		return strtr( $content, $replacements );
@@ -493,18 +795,22 @@ final class Sozlesme_Yonetimi {
 		$pdf_path = $this->generate_agreements_pdf( $object, $snapshot );
 		if ( $pdf_path ) {
 			$attachments[] = $pdf_path;
+			// E-posta gönderimi bu isteğin sonunda tamamlanmış olacağından,
+			// geçici PDF'i istek biter bitmez temizle (S3'e değil, yerel diske yazıldığı için buna gerek var).
+			register_shutdown_function( 'unlink', $pdf_path );
 		}
 
 		return $attachments;
 	}
 
 	private function generate_agreements_pdf( $order, $snapshot ) {
-		$upload_dir = wp_upload_dir();
-		$hedef_klasor = trailingslashit( $upload_dir['basedir'] ) . 'sozlesmeler-pdf';
+		// wp_upload_dir() bu sitede S3-Uploads tarafından uzak depolamaya (s3://) yönlendiriliyor.
+		// PHPMailer eklerini yerel dosya sisteminden okur, bu yüzden ekler için WordPress'in
+		// gerçek yerel geçici klasörünü (get_temp_dir()) kullanmak gerekiyor, uploads klasörünü değil.
+		$hedef_klasor = trailingslashit( get_temp_dir() ) . 'sozlesmeler-pdf';
 
 		if ( ! file_exists( $hedef_klasor ) ) {
 			wp_mkdir_p( $hedef_klasor );
-			file_put_contents( $hedef_klasor . '/index.php', "<?php\n// Silence is golden.\n" );
 		}
 
 		$dosya_adi = 'sozlesme-siparis-' . $order->get_order_number() . '-' . md5( $order->get_id() . $order->get_order_key() ) . '.pdf';
@@ -525,8 +831,9 @@ final class Sozlesme_Yonetimi {
 
 	private function build_pdf_html( $order, $snapshot ) {
 		$bolumler = '';
-		foreach ( $snapshot as $sozlesme ) {
-			$bolumler .= '<div class="sozlesme">'
+		foreach ( $snapshot as $index => $sozlesme ) {
+			$sinif = 'sozlesme' . ( $index > 0 ? ' sozlesme-yeni-sayfa' : '' );
+			$bolumler .= '<div class="' . $sinif . '">'
 				. '<h2>' . esc_html( $sozlesme['baslik'] ) . '</h2>'
 				. '<div class="icerik">' . wp_kses_post( $sozlesme['icerik'] ) . '</div>'
 				. '<p class="onay-notu">Onay tarihi: ' . esc_html( $sozlesme['onay_tarihi'] ) . '</p>'
@@ -534,17 +841,27 @@ final class Sozlesme_Yonetimi {
 		}
 
 		return '<html><head><meta charset="utf-8"><style>
-			body { font-family: "DejaVu Sans", sans-serif; font-size: 11px; color: #222; }
-			h1 { font-size: 16px; margin-bottom: 4px; }
-			.siparis-bilgi { font-size: 11px; color: #555; margin-bottom: 24px; }
-			.sozlesme { margin-bottom: 28px; page-break-inside: avoid; }
-			.sozlesme h2 { font-size: 13px; border-bottom: 1px solid #ccc; padding-bottom: 6px; }
-			.sozlesme .icerik p { margin: 0 0 10px; }
-			.onay-notu { font-size: 10px; color: #777; margin-top: 8px; }
-			table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10px; }
-			th, td { border-bottom: 1px solid #ddd; padding: 5px 6px; text-align: right; }
-			th:first-child, td:first-child { text-align: left; }
-			thead th { background: #f5f5f5; }
+			@page { margin: 16mm 14mm; }
+			* { box-sizing: border-box; }
+			body { font-family: "DejaVu Sans", sans-serif; font-size: 10px; color: #222; }
+			h1 { font-size: 15px; margin: 0 0 4px; }
+			.siparis-bilgi { font-size: 10px; color: #555; margin-bottom: 20px; }
+			.sozlesme { margin-bottom: 24px; }
+			.sozlesme-yeni-sayfa { page-break-before: always; }
+			.sozlesme h2 { font-size: 12px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+			.sozlesme .icerik { word-wrap: break-word; overflow-wrap: break-word; }
+			.sozlesme .icerik p { margin: 0 0 8px; }
+			.onay-notu { font-size: 9px; color: #777; margin-top: 6px; }
+
+			/* Sözleşme metninin kendi içindeki bilgi tabloları (Satıcı/Alıcı vb.) */
+			.icerik table { max-width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9px; }
+			.icerik table td, .icerik table th { padding: 4px 5px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; }
+
+			/* {sepet_urunleri} değişkeninin ürettiği ürün tablosu: taşmayı önlemek için sabit kolon genişlikleri */
+			.sozlesme-wce-urun-tablosu { table-layout: fixed; width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8px; }
+			.sozlesme-wce-urun-tablosu th, .sozlesme-wce-urun-tablosu td { border-bottom: 1px solid #ddd; padding: 4px 5px; text-align: right; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; }
+			.sozlesme-wce-urun-tablosu th:first-child, .sozlesme-wce-urun-tablosu td:first-child { text-align: left; width: 26%; }
+			.sozlesme-wce-urun-tablosu thead th { background: #f5f5f5; }
 		</style></head><body>'
 			. '<h1>' . esc_html( get_bloginfo( 'name' ) ) . ' — Onaylanan Sözleşmeler</h1>'
 			. '<p class="siparis-bilgi">Sipariş No: ' . esc_html( $order->get_order_number() ) . ' &nbsp;|&nbsp; Sipariş Tarihi: ' . esc_html( wc_format_datetime( $order->get_date_created() ) ) . ' &nbsp;|&nbsp; Müşteri: ' . esc_html( trim( $order->get_formatted_billing_full_name() ) ) . '</p>'
