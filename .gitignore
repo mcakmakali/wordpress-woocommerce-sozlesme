@@ -1,0 +1,9 @@
+# İşletim sistemi / editör dosyaları
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# PDF olarak üretilen sözleşme ekleri hiçbir zaman commit edilmemeli
+# (gerçek müşteri bilgisi içerebilir — yalnızca çalışma zamanında üretilip e-postaya eklenir).
+*.pdf
