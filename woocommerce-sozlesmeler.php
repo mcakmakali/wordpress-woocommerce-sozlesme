@@ -528,17 +528,41 @@ final class Sozlesme_Yonetimi {
 				'{tarih}'           => date_i18n( get_option( 'date_format' ) ),
 			);
 
-			// Fatura tipi henüz checkout formunda seçilmediğinden (sipariş oluşmadan önce)
-			// bu değişkenler yalnızca gerçek siparişte/PDF'te çözümlenebilir.
+			// CheckoutWC, Fatura Tipi radyosunu değiştirince sunucuya hiç istek atmıyor (saf JS ile
+			// alan gösterip gizliyor) — bu yüzden bu değişkenleri sunucu tarafında çözemiyoruz.
+			// Bunun yerine görünmez birer <span> olarak basıp checkout.js'te canlı olarak
+			// (form alanları değiştikçe) dolduruyoruz; bkz. assets/checkout.js.
 			if ( self::fatura_tipi_aktif() ) {
-				$replacements['{fatura_tipi}']    = '—';
-				$replacements['{sirket_unvani}']  = '—';
-				$replacements['{vergi_numarasi}'] = '—';
-				$replacements['{vergi_dairesi}']  = '—';
+				$bireysel_ad = $replacements['{musteri_adi}'];
+
+				$replacements['{musteri_adi}']    = '<span class="sozlesme-wce-ad-bireysel">' . esc_html( $bireysel_ad ) . '</span><span class="sozlesme-wce-ad-kurumsal"></span>';
+				$replacements['{fatura_tipi}']    = '<span class="sozlesme-wce-fatura-tipi">Bireysel</span>';
+				$replacements['{sirket_unvani}']  = '<span class="sozlesme-wce-sirket-unvani">—</span>';
+				$replacements['{vergi_numarasi}'] = '<span class="sozlesme-wce-vergi-no">—</span>';
+				$replacements['{vergi_dairesi}']  = '<span class="sozlesme-wce-vergi-dairesi">—</span>';
 			}
 		}
 
 		return strtr( $content, $replacements );
+	}
+
+	/**
+	 * WooCommerce'in "update_checkout" AJAX çağrısında (radyo/alan değişince tetiklenir) gelen
+	 * ham form verisinden Fatura Tipi alanlarını okuyup session'a yazar. Böylece ödeme sayfası
+	 * önizlemesindeki sözleşme popup'ı, sipariş henüz oluşmadan Bireysel/Kurumsal seçimine göre
+	 * güncel değişkenlerle (ör. {musteri_adi}) yeniden render edilebilir.
+	 */
+	public function sync_billing_customer_type_to_session( $post_data ) {
+		if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+			return;
+		}
+
+		parse_str( $post_data, $data );
+
+		WC()->session->set( 'sozlesme_wce_billing_customer_type', isset( $data['billing_customer_type'] ) ? sanitize_text_field( $data['billing_customer_type'] ) : '' );
+		WC()->session->set( 'sozlesme_wce_billing_company', isset( $data['billing_company'] ) ? sanitize_text_field( $data['billing_company'] ) : '' );
+		WC()->session->set( 'sozlesme_wce_billing_tax_office', isset( $data['billing_tax_office'] ) ? sanitize_text_field( $data['billing_tax_office'] ) : '' );
+		WC()->session->set( 'sozlesme_wce_billing_tax_number', isset( $data['billing_tax_number'] ) ? sanitize_text_field( $data['billing_tax_number'] ) : '' );
 	}
 
 	private function get_chosen_payment_method_title() {

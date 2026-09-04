@@ -2,6 +2,19 @@
 	margin: 0 0 20px;
 }
 
+/* Fatura Tipi (Bireysel/Kurumsal) değişkenleri — checkout.js tarafından canlı doldurulur. */
+.sozlesme-wce-ad-kurumsal {
+	display: none;
+}
+
+.sozlesme-wce-ad-kurumsal.sozlesme-wce-gorunur {
+	display: inline;
+}
+
+.sozlesme-wce-ad-bireysel.sozlesme-wce-gizli {
+	display: none;
+}
+
 .sozlesme-wce-satir {
 	margin: 0 0 8px !important;
 }
